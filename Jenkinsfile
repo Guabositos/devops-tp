@@ -114,12 +114,12 @@ pipeline {
         }
 
       stage('SonarQube Analysis') {
-      steps {
+    steps {
         echo '🔍 Analyse statique du code avec SonarQube...'
         withSonarQubeEnv("${SONAR_SERVER}") {
             withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_AUTH_TOKEN')]) {
                 script {
-                    def scannerHome = tool 'SonarScanner'  // Use the name you set in Jenkins Tools configuration
+                    def scannerHome = tool 'SonarScanner'
                     sh """
                         ${scannerHome}/bin/sonar-scanner \
                             -Dsonar.projectKey=devops-tp-flask \
@@ -127,7 +127,7 @@ pipeline {
                             -Dsonar.tests=app \
                             -Dsonar.test.inclusions=**/test_*.py \
                             -Dsonar.python.coverage.reportPaths=reports/coverage.xml \
-                            -Dsonar.login=${SONAR_AUTH_TOKEN}
+                            -Dsonar.token=${SONAR_AUTH_TOKEN}
                     """
                 }
             }
