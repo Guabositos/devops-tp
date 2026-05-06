@@ -117,17 +117,14 @@ pipeline {
     steps {
         echo '🔍 Analyse statique du code avec SonarQube...'
         withSonarQubeEnv("${SONAR_SERVER}") {
-            withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_AUTH_TOKEN')]) {
-                sh '''
-                    /opt/sonar-scanner/bin/sonar-scanner \
-                        -Dsonar.projectKey=devops-tp-flask \
-                        -Dsonar.sources=app \
-                        -Dsonar.tests=app \
-                        -Dsonar.test.inclusions=**/test_*.py \
-                        -Dsonar.python.coverage.reportPaths=reports/coverage.xml \
-                        -Dsonar.token=${SONAR_AUTH_TOKEN}
-                '''
-            }
+            sh '''
+                /opt/sonar-scanner/bin/sonar-scanner \
+                    -Dsonar.projectKey=devops-tp-flask \
+                    -Dsonar.sources=app \
+                    -Dsonar.tests=app \
+                    -Dsonar.test.inclusions=**/test_*.py \
+                    -Dsonar.python.coverage.reportPaths=reports/coverage.xml
+            '''
         }
     }
 }
