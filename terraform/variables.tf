@@ -7,7 +7,7 @@ variable "kubeconfig_path" {
 variable "kube_context" {
   description = "Contexte Kubernetes à utiliser (ex: minikube, kind-kind)"
   type        = string
-  default     = "minikube"
+  default     = "docker-desktop"
 }
 
 variable "app_namespace" {

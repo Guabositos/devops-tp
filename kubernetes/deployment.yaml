@@ -85,7 +85,7 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-    - host: devops-tp.local   # Ajouter dans /etc/hosts : $(minikube ip) devops-tp.local
+    - host: localhost   
       http:
         paths:
           - path: /

@@ -28,8 +28,8 @@ pipeline {
 
         // Kubernetes / déploiement
         APP_NAMESPACE      = 'devops-tp'
-        APP_URL            = 'http://devops-tp.local'
-        KUBECONFIG_PATH    = '/var/lib/jenkins/.kube/config'
+        APP_URL            = 'http://localhost'
+        KUBECONFIG_PATH    = '/root/.kube/config'
 
         // Crédentiels Jenkins (à créer dans Jenkins > Credentials)
         // DOCKER_CREDS   → Username/Password Docker Hub

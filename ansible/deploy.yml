@@ -12,9 +12,9 @@
 
   vars:
     docker_image: "monuser/devops-tp-flask:latest"
-    kubeconfig: "~/.kube/config"
+    kubeconfig:  "/root/.kube/config"
     app_namespace: "devops-tp"
-    app_url: "http://devops-tp.local"
+    app_url:  "http://localhost"
     smoke_retries: 5
     smoke_delay: 10
 
