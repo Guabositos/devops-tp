@@ -118,6 +118,7 @@ pipeline {
                 echo '🔍 Analyse statique du code avec SonarQube...'
                 withSonarQubeEnv("${SONAR_SERVER}") {
                     withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_AUTH_TOKEN')]) {
+                        def sonarScannerHome = tool 'SonarQubeScanner'
                         sh '''
                             sonar-scanner \
                                 -Dsonar.projectKey=devops-tp-flask \
