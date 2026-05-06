@@ -121,7 +121,7 @@ pipeline {
                 script {
                     def scannerHome = tool 'SonarScanner'
                     sh '''
-                        ${scannerHome}/bin/sonar-scanner \
+                            /opt/bin/sonar-scanner \
                             -Dsonar.projectKey=devops-tp-flask \
                             -Dsonar.sources=app \
                             -Dsonar.tests=app \
