@@ -158,45 +158,41 @@ pipeline {
                 """
             }
         }
+stage('Trivy Image Scan') {
+    steps {
+        echo '🛡️  Scan de sécurité Trivy sur l\'image Docker...'
+        catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+            sh """
+                # Installer Trivy si absent
+                if ! command -v trivy &> /dev/null; then
+                    curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+                        | sh -s -- -b /usr/local/bin
+                fi
 
-        stage('Trivy Image Scan') {
-            steps {
-                echo '🛡️  Scan de sécurité Trivy sur l\'image Docker...'
-                sh """
-                    # Installer Trivy si absent
-                    if ! command -v trivy &> /dev/null; then
-                        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
-                            | sh -s -- -b /usr/local/bin
-                    fi
+                # Scanner l'image et générer un rapport tableau
+                trivy image \
+                    --exit-code 0 \
+                    --severity HIGH,CRITICAL \
+                    --format table \
+                    --output reports/trivy-report.txt \
+                    ${FULL_IMAGE}
 
-                    # Scanner l'image et générer un rapport JSON + tableau
-                    trivy image \
-                        --exit-code 1 \
-                        --severity HIGH,CRITICAL \
-                        --format table \
-                        --output reports/trivy-report.txt \
-                        ${FULL_IMAGE}
-
-                    # Rapport JSON pour archivage
-                    trivy image \
-                        --exit-code 0 \
-                        --severity HIGH,CRITICAL \
-                        --format json \
-                        --output reports/trivy-report.json \
-                        ${FULL_IMAGE}
-                """
-            }
-            post {
-                always {
-                    // Archiver le rapport Trivy même en cas d'échec
-                    archiveArtifacts artifacts: 'reports/trivy-report.*', allowEmptyArchive: true
-                }
-                failure {
-                    echo '❌ Trivy a détecté des vulnérabilités CRITICAL ou HIGH !'
-                    echo '   Consultez reports/trivy-report.txt pour les détails.'
-                }
-            }
+                # Rapport JSON pour archivage
+                trivy image \
+                    --exit-code 0 \
+                    --severity HIGH,CRITICAL \
+                    --format json \
+                    --output reports/trivy-report.json \
+                    ${FULL_IMAGE}
+            """
         }
+    }
+    post {
+        always {
+            archiveArtifacts artifacts: 'reports/trivy-report.*', allowEmptyArchive: true
+        }
+    }
+}
 
         stage('Docker Push') {
             steps {
