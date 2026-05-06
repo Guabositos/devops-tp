@@ -117,7 +117,7 @@ pipeline {
             steps {
                 echo '🔍 Analyse statique du code avec SonarQube...'
                 withSonarQubeEnv("${SONAR_SERVER}") {
-                    withCredentials([string(credentialsId: 'SONAR_TOKEN', variable: 'SONAR_AUTH_TOKEN')]) {
+                    withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_AUTH_TOKEN')]) {
                         sh '''
                             sonar-scanner \
                                 -Dsonar.projectKey=devops-tp-flask \
