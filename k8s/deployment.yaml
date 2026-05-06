@@ -1,0 +1,97 @@
+---
+# ── Deployment ────────────────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: devops-tp-flask
+  namespace: devops-tp
+  labels:
+    app: devops-tp-flask
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: devops-tp-flask
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: devops-tp-flask
+      annotations:
+        # Permet à Prometheus de scraper sans ServiceMonitor
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "5000"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+        - name: flask-app
+          image: DOCKER_IMAGE_PLACEHOLDER   # Remplacé par Ansible via --extra-vars
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 5000
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+---
+# ── Service ───────────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: devops-tp-flask
+  namespace: devops-tp
+  labels:
+    app: devops-tp-flask
+spec:
+  selector:
+    app: devops-tp-flask
+  ports:
+    - name: http
+      port: 80
+      targetPort: 5000
+  type: ClusterIP
+---
+# ── Ingress (nginx) ───────────────────────────────────────────────────────────
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: devops-tp-flask
+  namespace: devops-tp
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: devops-tp.local   # Ajouter dans /etc/hosts : $(minikube ip) devops-tp.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: devops-tp-flask
+                port:
+                  number: 80

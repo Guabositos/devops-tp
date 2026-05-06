@@ -1,0 +1,98 @@
+---
+# ── Playbook Ansible : déploiement de l'application sur Kubernetes ─────────────
+# Usage :
+#   ansible-playbook deploy.yml \
+#     -e "docker_image=monuser/devops-tp-flask:42" \
+#     -e "kubeconfig=/home/jenkins/.kube/config"
+#
+- name: Déploiement DevOps TP Flask sur Kubernetes
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    docker_image: "monuser/devops-tp-flask:latest"
+    kubeconfig: "~/.kube/config"
+    app_namespace: "devops-tp"
+    app_url: "http://devops-tp.local"
+    smoke_retries: 5
+    smoke_delay: 10
+
+  tasks:
+    # ── 1. Vérifier que kubectl est disponible ─────────────────────────────────
+    - name: Vérifier kubectl
+      command: kubectl version --client --short
+      register: kubectl_check
+      changed_when: false
+
+    - name: Afficher la version kubectl
+      debug:
+        msg: "{{ kubectl_check.stdout }}"
+
+    # ── 2. Appliquer les manifests K8s ─────────────────────────────────────────
+    - name: Créer le namespace si inexistant
+      kubernetes.core.k8s:
+        kubeconfig: "{{ kubeconfig }}"
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: "{{ app_namespace }}"
+            labels:
+              managed-by: ansible
+
+    - name: Déployer les manifests Kubernetes
+      kubernetes.core.k8s:
+        kubeconfig: "{{ kubeconfig }}"
+        state: present
+        src: "{{ playbook_dir }}/../k8s/deployment.yaml"
+      register: k8s_apply
+
+    # ── 3. Injecter l'image Docker buildée par Jenkins ─────────────────────────
+    - name: Mettre à jour l'image du Deployment
+      kubernetes.core.k8s:
+        kubeconfig: "{{ kubeconfig }}"
+        state: present
+        definition:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: devops-tp-flask
+            namespace: "{{ app_namespace }}"
+          spec:
+            template:
+              spec:
+                containers:
+                  - name: flask-app
+                    image: "{{ docker_image }}"
+
+    # ── 4. Attendre que les pods soient Running ────────────────────────────────
+    - name: Attendre le rollout du Deployment
+      command: >
+        kubectl rollout status deployment/devops-tp-flask
+        -n {{ app_namespace }}
+        --kubeconfig {{ kubeconfig }}
+        --timeout=120s
+      register: rollout_status
+      changed_when: false
+
+    - name: Afficher le statut du rollout
+      debug:
+        msg: "{{ rollout_status.stdout }}"
+
+    # ── 5. Smoke Test : vérifier l'accessibilité ───────────────────────────────
+    - name: Smoke test – vérifier l'endpoint /health
+      uri:
+        url: "{{ app_url }}/health"
+        method: GET
+        status_code: 200
+        timeout: 10
+      register: smoke_result
+      retries: "{{ smoke_retries }}"
+      delay: "{{ smoke_delay }}"
+      until: smoke_result.status == 200
+
+    - name: Résultat du smoke test
+      debug:
+        msg: "✅ Application accessible – statut HTTP {{ smoke_result.status }}"

@@ -1,0 +1,102 @@
+---
+# ── PrometheusRule : AlertManager – règles du TP ─────────────────────────────
+# Appliquer : kubectl apply -f alertmanager-rules.yaml -n monitoring
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: devops-tp-alerts
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack   # doit correspondre au label du Helm release
+spec:
+  groups:
+    # ── Groupe 1 : disponibilité de l'application ────────────────────────────
+    - name: devops-tp.availability
+      interval: 30s
+      rules:
+        - alert: AppServiceDown
+          expr: |
+            absent(up{job="devops-tp-flask"} == 1)
+          for: 2m
+          labels:
+            severity: critical
+            team: devops-tp
+          annotations:
+            summary: "Service devops-tp-flask indisponible"
+            description: >
+              Le service devops-tp-flask n'a plus de cibles disponibles
+              depuis plus de 2 minutes. Vérifiez les pods dans le namespace devops-tp.
+
+        - alert: AppHighErrorRate
+          expr: |
+            rate(http_requests_total{status=~"5..", job="devops-tp-flask"}[5m])
+            /
+            rate(http_requests_total{job="devops-tp-flask"}[5m])
+            > 0.05
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Taux d'erreurs HTTP 5xx élevé"
+            description: "Plus de 5% des requêtes retournent une erreur 5xx."
+
+    # ── Groupe 2 : ressources ─────────────────────────────────────────────────
+    - name: devops-tp.resources
+      rules:
+        - alert: PodCrashLooping
+          expr: |
+            rate(kube_pod_container_status_restarts_total{
+              namespace="devops-tp"
+            }[15m]) * 60 * 15 > 3
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Pod en CrashLoopBackOff"
+            description: "Le pod {{ $labels.pod }} redémarre trop fréquemment."
+
+---
+# ── AlertManager config : notification par email ─────────────────────────────
+# À intégrer dans les values Helm (alertmanager.config) ou secret alertmanager-main
+apiVersion: v1
+kind: Secret
+metadata:
+  name: alertmanager-devops-tp
+  namespace: monitoring
+type: Opaque
+stringData:
+  alertmanager.yaml: |
+    global:
+      smtp_smarthost: 'smtp.gmail.com:587'
+      smtp_from: 'alertmanager@devops-tp.local'
+      smtp_auth_username: 'votre-email@gmail.com'
+      smtp_auth_password: 'votre-app-password'
+
+    route:
+      group_by: ['alertname', 'severity']
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 1h
+      receiver: 'devops-tp-email'
+      routes:
+        - match:
+            severity: critical
+          receiver: 'devops-tp-email'
+          repeat_interval: 15m
+
+    receivers:
+      - name: 'devops-tp-email'
+        email_configs:
+          - to: 'votre-email@gmail.com'
+            send_resolved: true
+            headers:
+              Subject: '[ALERTE TP] {{ .GroupLabels.alertname }} – {{ .Status | toUpper }}'
+
+      - name: 'null'   # Récepteur pour les alertes supprimées (inhibit)
+
+    inhibit_rules:
+      - source_match:
+          severity: 'critical'
+        target_match:
+          severity: 'warning'
+        equal: ['alertname', 'namespace']

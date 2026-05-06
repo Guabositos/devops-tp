@@ -1,0 +1,120 @@
+{
+  "title": "DevOps TP – Flask App Dashboard",
+  "uid": "devops-tp-flask",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "15s",
+  "tags": ["devops-tp", "flask", "kubernetes"],
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Pods Running",
+      "type": "stat",
+      "gridPos": { "x": 0, "y": 0, "w": 4, "h": 4 },
+      "targets": [{
+        "expr": "count(kube_pod_status_phase{namespace=\"devops-tp\", phase=\"Running\"})",
+        "legendFormat": "Pods actifs"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              { "color": "red", "value": 0 },
+              { "color": "yellow", "value": 1 },
+              { "color": "green", "value": 2 }
+            ]
+          },
+          "color": { "mode": "thresholds" }
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "CPU Usage – devops-tp pods",
+      "type": "timeseries",
+      "gridPos": { "x": 4, "y": 0, "w": 10, "h": 8 },
+      "targets": [{
+        "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"devops-tp\", container=\"flask-app\"}[5m])) by (pod)",
+        "legendFormat": "{{ pod }}"
+      }],
+      "fieldConfig": {
+        "defaults": { "unit": "short", "custom": { "lineWidth": 2 } }
+      }
+    },
+    {
+      "id": 3,
+      "title": "Memory Usage – devops-tp pods",
+      "type": "timeseries",
+      "gridPos": { "x": 14, "y": 0, "w": 10, "h": 8 },
+      "targets": [{
+        "expr": "sum(container_memory_working_set_bytes{namespace=\"devops-tp\", container=\"flask-app\"}) by (pod)",
+        "legendFormat": "{{ pod }}"
+      }],
+      "fieldConfig": {
+        "defaults": { "unit": "bytes" }
+      }
+    },
+    {
+      "id": 4,
+      "title": "Pod Restarts",
+      "type": "stat",
+      "gridPos": { "x": 0, "y": 4, "w": 4, "h": 4 },
+      "targets": [{
+        "expr": "sum(kube_pod_container_status_restarts_total{namespace=\"devops-tp\"})",
+        "legendFormat": "Redémarrages"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": 0 },
+              { "color": "yellow", "value": 3 },
+              { "color": "red", "value": 10 }
+            ]
+          },
+          "color": { "mode": "thresholds" }
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "Requêtes HTTP / seconde",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "targets": [{
+        "expr": "sum(rate(http_requests_total{job=\"devops-tp-flask\"}[2m])) by (status)",
+        "legendFormat": "HTTP {{ status }}"
+      }],
+      "fieldConfig": {
+        "defaults": { "unit": "reqps" }
+      }
+    },
+    {
+      "id": 6,
+      "title": "Latence P95 (ms)",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+      "targets": [{
+        "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job=\"devops-tp-flask\"}[5m])) * 1000",
+        "legendFormat": "p95 latence"
+      }],
+      "fieldConfig": {
+        "defaults": { "unit": "ms" }
+      }
+    },
+    {
+      "id": 7,
+      "title": "Trafic réseau entrant",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 16, "w": 24, "h": 8 },
+      "targets": [{
+        "expr": "sum(rate(container_network_receive_bytes_total{namespace=\"devops-tp\"}[5m])) by (pod)",
+        "legendFormat": "{{ pod }} – entrant"
+      }],
+      "fieldConfig": {
+        "defaults": { "unit": "Bps" }
+      }
+    }
+  ]
+}
