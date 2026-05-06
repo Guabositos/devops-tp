@@ -113,25 +113,27 @@ pipeline {
             }
         }
 
-        stage('SonarQube Analysis') {
-            steps {
-                echo '🔍 Analyse statique du code avec SonarQube...'
-                withSonarQubeEnv("${SONAR_SERVER}") {
-                    withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_AUTH_TOKEN')]) {
-                        def sonarScannerHome = tool 'SonarQubeScanner'
-                        sh '''
-                            sonar-scanner \
-                                -Dsonar.projectKey=devops-tp-flask \
-                                -Dsonar.sources=app \
-                                -Dsonar.tests=app \
-                                -Dsonar.test.inclusions=**/test_*.py \
-                                -Dsonar.python.coverage.reportPaths=reports/coverage.xml \
-                                -Dsonar.login=${SONAR_AUTH_TOKEN}
-                        '''
-                    }
+      stage('SonarQube Analysis') {
+    steps {
+        echo '🔍 Analyse statique du code avec SonarQube...'
+        withSonarQubeEnv("${SONAR_SERVER}") {
+            withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_AUTH_TOKEN')]) {
+                script {
+                    def scannerHome = tool 'SonarQubeScanner'  // Use the name you set in Jenkins Tools configuration
+                    sh """
+                        ${scannerHome}/bin/sonar-scanner \
+                            -Dsonar.projectKey=devops-tp-flask \
+                            -Dsonar.sources=app \
+                            -Dsonar.tests=app \
+                            -Dsonar.test.inclusions=**/test_*.py \
+                            -Dsonar.python.coverage.reportPaths=reports/coverage.xml \
+                            -Dsonar.login=${SONAR_AUTH_TOKEN}
+                    """
                 }
             }
         }
+    }
+}
 
         stage('Quality Gate') {
             steps {
