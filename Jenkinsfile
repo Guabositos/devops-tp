@@ -163,13 +163,6 @@ stage('Trivy Image Scan') {
         echo '🛡️  Scan de sécurité Trivy sur l\'image Docker...'
         catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
             sh """
-                # Installer Trivy si absent
-                if ! command -v trivy &> /dev/null; then
-                    curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
-                        | sh -s -- -b /usr/local/bin
-                fi
-
-                # Scanner l'image et générer un rapport tableau
                 trivy image \
                     --exit-code 0 \
                     --severity HIGH,CRITICAL \
@@ -177,7 +170,6 @@ stage('Trivy Image Scan') {
                     --output reports/trivy-report.txt \
                     ${FULL_IMAGE}
 
-                # Rapport JSON pour archivage
                 trivy image \
                     --exit-code 0 \
                     --severity HIGH,CRITICAL \
@@ -198,7 +190,7 @@ stage('Trivy Image Scan') {
             steps {
                 echo "📤 Push de l'image vers Docker Hub : ${FULL_IMAGE}"
                 withCredentials([usernamePassword(
-                    credentialsId: 'DOCKER_CREDS',
+                    credentialsId: 'dockerhub-creds',
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
